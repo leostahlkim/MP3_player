@@ -1,0 +1,119 @@
+
+#include <SPI.h>
+#include <SdFat.h>
+#include <SdFatUtil.h>
+#include <SFEMP3Shield.h>
+
+SdFat sd; 
+
+SFEMP3Shield MP3player;
+uint8_t volume = 255;
+const uint16_t monoMode = 1;  
+
+
+int triggerPin = A4;
+int stopPin = A5;
+int bassPin = A0;
+int trackVariable = 1;
+int PbuttonState = HIGH;
+int PlastButtonState = HIGH;
+int MbuttonState = HIGH;
+int MlastButtonState = HIGH;
+int potPin = A2;
+int VValue = 0;
+uint8_t BValue = 0;
+int ppValue = 1;
+
+void initSD()
+{
+
+  if (!sd.begin(SD_SEL, SPI_HALF_SPEED))
+    sd.initErrorHalt();
+  if (!sd.chdir("/"))
+    sd.errorHalt("sd.chdir");
+}
+
+
+void initMP3Player()
+{
+  uint8_t result = MP3player.begin(); 
+
+  MP3player.setMonoMode(monoMode);
+}
+
+void setup()
+{
+  
+
+  pinMode(triggerPin, INPUT_PULLUP);
+
+  pinMode(stopPin, INPUT_PULLUP);
+
+  Serial.begin(9600);
+
+  initSD();  
+  initMP3Player(); 
+}
+
+
+void loop()
+{
+  PbuttonState = digitalRead(stopPin);
+
+  MbuttonState = digitalRead(triggerPin);
+
+  BValue = analogRead(bassPin) / 45.4;
+
+  VValue = analogRead(potPin) / 11;
+
+  Serial.print(MP3player.getBassAmplitude());
+  
+  MP3player.setBassAmplitude(BValue);
+
+  MP3player.setVolume(VValue, VValue);
+
+  if ((MbuttonState != MlastButtonState))
+  {
+    if ((MbuttonState == LOW))
+    {
+
+      if (MP3player.isPlaying())
+        MP3player.stopTrack();
+
+     
+
+      uint8_t result = MP3player.playTrack(trackVariable);
+
+      if (trackVariable < 9)
+      {
+        trackVariable++;
+      }
+      else {
+        trackVariable = 1;
+      }
+    }
+    MlastButtonState = MbuttonState;
+  }
+  if ((PbuttonState != PlastButtonState))
+  {
+    if ((PbuttonState == LOW))
+    {
+      if (ppValue == 1)
+      {
+        
+        MP3player.pauseMusic();
+        ppValue = 0;
+      }
+      else
+      {
+        
+        MP3player.resumeMusic();
+        ppValue = 1;
+      }
+
+    }
+    PlastButtonState = PbuttonState;
+  }
+}
+
+
